@@ -4,24 +4,13 @@ import numpy as np
 import cv2
 import base64
 
-from cryptography.fernet import Fernet
-import stego_functions
-import ai_detector
-import smart_selector
+import steganography_engine as stego
 
 app = Flask(__name__)
 CORS(app)
 
 
-# Function to convert user key to Fernet key
-def generate_key(user_key):
-
-    import hashlib
-
-    key = hashlib.sha256(user_key.encode()).digest()
-
-    return base64.urlsafe_b64encode(key)
-
+# ---------------- IMAGE ----------------
 
 @app.route("/encode-image", methods=["POST"])
 def encode_image():
@@ -34,78 +23,91 @@ def encode_image():
     nparr = np.frombuffer(file.read(), np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # Generate encryption key
-    fernet_key = generate_key(key)
-    cipher = Fernet(fernet_key)
+    encoded = stego.encode_image(img, message)
 
-    # Encrypt message
-    encrypted_message = cipher.encrypt(message.encode()).decode()
-
-    # Hide encrypted message
-    encoded = stego_functions.encode_image(img, encrypted_message)
-
-    _, buffer = cv2.imencode(".png", encoded)
+    _, buffer = cv2.imencode(".jpg", encoded)
 
     img_base64 = base64.b64encode(buffer).decode()
 
     return jsonify({
-        "image": "data:image/png;base64," + img_base64
+        "image": "data:image/jpeg;base64," + img_base64
     })
 
 
 @app.route("/decode-image", methods=["POST"])
 def decode_image():
 
-    key = request.form["key"]
-
     file = request.files["image"]
 
     nparr = np.frombuffer(file.read(), np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    encrypted_message = stego_functions.decode_image(img)
+    message = stego.decode_image(img)
 
-    try:
-
-        fernet_key = generate_key(key)
-
-        cipher = Fernet(fernet_key)
-
-        decrypted_message = cipher.decrypt(encrypted_message.encode()).decode()
-
-        return jsonify({"message": decrypted_message})
-
-    except:
-
-        return jsonify({"message": "Wrong key or corrupted message"})
+    return jsonify({"message": message})
 
 
-@app.route("/detect", methods=["POST"])
-def detect():
+# ---------------- AUDIO ----------------
 
-    file = request.files["image"]
+@app.route("/encode-audio", methods=["POST"])
+def encode_audio():
 
-    nparr = np.frombuffer(file.read(), np.uint8)
+    message = request.form["message"]
 
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    file = request.files["audio"]
 
-    probability = ai_detector.detect_steganography(img)
+    filename = "temp.wav"
+    file.save(filename)
 
-    return jsonify({"probability": probability})
+    output = stego.encode_audio(filename, message, "stego_audio.wav")
+
+    return jsonify({"status": "audio encoded"})
 
 
-@app.route("/smart-select", methods=["POST"])
-def smart_select():
+@app.route("/decode-audio", methods=["POST"])
+def decode_audio():
 
-    file = request.files["image"]
+    file = request.files["audio"]
 
-    nparr = np.frombuffer(file.read(), np.uint8)
+    filename = "temp.wav"
+    file.save(filename)
 
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    message = stego.decode_audio(filename)
 
-    result = smart_selector.analyze_image(img)
+    return jsonify({"message": message})
 
-    return jsonify(result)
+
+# ---------------- VIDEO ----------------
+
+@app.route("/encode-video", methods=["POST"])
+def encode_video():
+
+    message = request.form["message"]
+
+    file = request.files["video"]
+
+    filename = "temp.mp4"
+    file.save(filename)
+
+    output = stego.encode_video(filename, message, "stego_video.mp4")
+
+    return jsonify({"status": "video encoded"})
+
+
+# ---------------- TEXT ----------------
+
+@app.route("/encode-text", methods=["POST"])
+def encode_text():
+
+    message = request.form["message"]
+
+    output = stego.encode_text(
+        "Sample_cover_files/cover_text.txt",
+        message,
+        "stego_text.txt"
+    )
+
+    return jsonify({"status": "text encoded"})
 
 
 if __name__ == "__main__":

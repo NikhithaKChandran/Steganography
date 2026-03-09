@@ -1,0 +1,20 @@
+{
+  "layers": [
+    {
+      "type": "text",
+      "cover": "Sample_cover_files/cover_text3.txt",
+      "key": "text789"
+    },
+    {
+      "type": "audio",
+      "cover": "Sample_cover_files/cover_audio.wav",
+      "key": "audio456"
+    },
+    {
+      "type": "image",
+      "cover": "Sample_cover_files/cover_image.jpg",
+      "key": "image123"
+    }
+    
+  ]
+}

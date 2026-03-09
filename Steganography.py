@@ -3,16 +3,14 @@
 
 # In[1]:
 
-
+import wave
 import numpy as np
 import pandas as pand
 import os
 import cv2
 from matplotlib import pyplot as plt
 
-
 # In[2]:
-
 
 def txt_encode(text):
     l=len(text)
@@ -23,13 +21,13 @@ def txt_encode(text):
         if(t>=32 and t<=64):
             t1=t+48
             t2=t1^170       #170: 10101010
-            res = bin(t2)[2:].zfill(8)
+            res = format(t2 & 0xFF, '08b')
             add+="0011"+res
         
         else:
             t1=t-48
             t2=t1^170
-            res = bin(t2)[2:].zfill(8)
+            res = format(t2 & 0xFF, '08b')
             add+="0110"+res
         i+=1
     res1=add+"111111111111"
@@ -38,7 +36,12 @@ def txt_encode(text):
     print("Length of binary after conversion:- ",length)
     HM_SK=""
     ZWC={"00":u'\u200C',"01":u'\u202C',"11":u'\u202D',"10":u'\u200E'}      
-    file1 = open("Sample_cover_files/cover_text.txt","r+")
+    file1 = open(
+        "Sample_cover_files/cover_text.txt",
+        "r",
+        encoding="utf-8",
+        errors="ignore"
+    )
     nameoffile = input("\nEnter the name of the Stego file after Encoding(with extension):- ")
     file3= open(nameoffile,"w+", encoding="utf-8")
     word=[]
@@ -67,13 +70,16 @@ def txt_encode(text):
     file1.close()
     print("\nStego file has successfully generated")
 
-
 # In[3]:
-
 
 def encode_txt_data():
     count2=0
-    file1 = open("Sample_cover_files/cover_text.txt","r")
+    file1 = open(
+        "Sample_cover_files/cover_text.txt",
+        "r",
+        encoding="utf-8",
+        errors="ignore"
+    )
     for line in file1: 
         for word in line.split():
             count2=count2+1
@@ -81,6 +87,8 @@ def encode_txt_data():
     bt=int(count2)
     print("Maximum number of words that can be inserted :- ",int(bt/6))
     text1=input("\nEnter data to be encoded:- ")
+    text1 = encryption(text1)
+    print("Encrypted data is :", text1)
     l=len(text1)
     if(l<=bt):
         print("\nInputed message can be hidden in the cover file\n")
@@ -89,17 +97,13 @@ def encode_txt_data():
         print("\nString is too big please reduce string size")
         encode_txt_data()
 
-
 # In[4]:
-
 
 def BinaryToDecimal(binary):
     string = int(binary, 2)
     return string
 
-
 # In[5]:
-
 
 def decode_txt_data():
     ZWC_reverse={u'\u200C':"00",u'\u202C':"01",u'\u202D':"11",u'\u200E':"10"}
@@ -140,11 +144,11 @@ def decode_txt_data():
         elif(t3=='0011'):
             decimal_data = BinaryToDecimal(t4)
             final+=chr((decimal_data ^ 170) - 48)
-    print("\nMessage after decoding from the stego file:- ",final)
-
+    print("\nEncrypted message extracted :- ", final)
+    plain_text = decryption(final)
+    print("\nOriginal hidden message :- ", plain_text)
 
 # In[6]:
-
 
 def txt_steg():
     while True:
@@ -163,9 +167,7 @@ def txt_steg():
             print("Incorrect Choice")
         print("\n")
 
-
 # In[7]:
-
 
 def msgtobinary(msg):
     if type(msg) == str:
@@ -182,12 +184,12 @@ def msgtobinary(msg):
     
     return result
 
-
 # In[8]:
 
-
 def encode_img_data(img):
-    data=input("\nEnter the data to be Encoded in Image :")    
+    data=input("\nEnter the data to be Encoded in Image :")
+    data = encryption(data)
+    print("Encrypted data is :", data)    
     if (len(data) == 0): 
         raise ValueError('Data entered to be encoded is empty')
   
@@ -228,29 +230,38 @@ def encode_img_data(img):
     cv2.imwrite(nameoffile,img)
     print("\nEncoded the data successfully in the Image and the image is successfully saved with name ",nameoffile)
 
-
 # In[9]:
-
 
 def decode_img_data(img):
     data_binary = ""
-    for i in img:
-        for pixel in i:
-            r, g, b = msgtobinary(pixel) 
-            data_binary += r[-1]  
-            data_binary += g[-1]  
-            data_binary += b[-1]  
-            total_bytes = [ data_binary[i: i+8] for i in range(0, len(data_binary), 8) ]
-            decoded_data = ""
-            for byte in total_bytes:
-                decoded_data += chr(int(byte, 2))
-                if decoded_data[-5:] == "*^*^*": 
-                    print("\n\nThe Encoded data which was hidden in the Image was :--  ",decoded_data[:-5])
-                    return 
 
+    for row in img:
+        for pixel in row:
+            r, g, b = msgtobinary(pixel)
+            data_binary += r[-1]
+            data_binary += g[-1]
+            data_binary += b[-1]
+
+    decoded_data = ""
+    
+    for i in range(0, len(data_binary), 8):
+        byte = data_binary[i:i+8]
+        if len(byte) < 8:
+            break
+            
+        decoded_data += chr(int(byte, 2))
+
+        if decoded_data.endswith("*^*^*"):
+            cipher_text = decoded_data[:-5]
+            print("\nEncrypted data found:", cipher_text)
+
+            plain_text = decryption(cipher_text)
+            print("\nThe Original hidden message was :--", plain_text)
+            return
+
+    print("\nNo hidden message found.")
 
 # In[10]:
-
 
 def img_steg():
     while True:
@@ -263,7 +274,12 @@ def img_steg():
             image=cv2.imread("Sample_cover_files/cover_image.jpg")
             encode_img_data(image)
         elif choice1 == 2:
-            image1=cv2.imread(input("Enter the Image you need to Decode to get the Secret message :  "))
+            filename = input("Enter the Image you need to Decode to get the Secret message :  ")
+            image1 = cv2.imread(filename)
+
+            if image1 is None:
+                print("Error: Image not found or failed to load.")
+                return
             decode_img_data(image1)
         elif choice1 == 3:
             break
@@ -271,14 +287,13 @@ def img_steg():
             print("Incorrect Choice")
         print("\n")
 
-
 # In[11]:
-
 
 def encode_aud_data():
     import wave
 
-    nameoffile=input("Enter name of the file (with extension) :- ")
+    nameoffile = input("Enter name of the file (with extension) :- ")
+    nameoffile = os.path.join("Sample_cover_files", nameoffile)
     song = wave.open(nameoffile, mode='rb')
 
     nframes=song.getnframes()
@@ -287,6 +302,8 @@ def encode_aud_data():
     frame_bytes=bytearray(frame_list)
 
     data = input("\nEnter the secret message :- ")
+    data = encryption(data)
+    print("Encrypted data is :", data)
 
     res = ''.join(format(i, '08b') for i in bytearray(data, encoding ='utf-8'))     
     print("\nThe string after binary conversion :- " + (res))   
@@ -319,9 +336,7 @@ def encode_aud_data():
     print("\nEncoded the data successfully in the audio file.")    
     song.close()
 
-
 # In[12]:
-
 
 def decode_aud_data():
     import wave
@@ -350,13 +365,15 @@ def decode_aud_data():
         for byte in all_bytes:
             decoded_data += chr(int(byte, 2))
             if decoded_data[-5:] == "*^*^*":
-                print("The Encoded data was :--",decoded_data[:-5])
+                cipher_text = decoded_data[:-5]
+                print("Encrypted data found :", cipher_text)
+
+                plain_text = decryption(cipher_text)
+                print("The Original hidden message was :--", plain_text)
                 p=1
                 break  
 
-
 # In[13]:
-
 
 def aud_steg():
     while True:
@@ -375,9 +392,7 @@ def aud_steg():
             print("Incorrect Choice")
         print("\n")
 
-
 # In[14]:
-
 
 def KSA(key):
     key_length = len(key)
@@ -388,9 +403,7 @@ def KSA(key):
         S[i],S[j]=S[j],S[i]
     return S
 
-
 # In[15]:
-
 
 def PRGA(S,n):
     i=0
@@ -405,16 +418,12 @@ def PRGA(S,n):
         key.append(K)
     return key
 
-
 # In[16]:
-
 
 def preparing_key_array(s):
     return [ord(c) for c in s]
 
-
 # In[17]:
-
 
 def encryption(plaintext):
     print("Enter the key : ")
@@ -432,9 +441,7 @@ def encryption(plaintext):
         ctext=ctext+chr(c)
     return ctext
 
-
 # In[18]:
-
 
 def decryption(ciphertext):
     print("Enter the key : ")
@@ -452,9 +459,7 @@ def decryption(ciphertext):
         dtext=dtext+chr(c)
     return dtext
 
-
 # In[19]:
-
 
 def embed(frame):
     data=input("\nEnter the data to be Encoded in Video :") 
@@ -486,9 +491,7 @@ def embed(frame):
                 break
         return frame
 
-
 # In[20]:
-
 
 def extract(frame):
     data_binary = ""
@@ -510,9 +513,7 @@ def extract(frame):
                     print("\n\nThe Encoded data which was hidden in the Video was :--\n",final_decoded_msg)
                     return 
 
-
 # In[21]:
-
 
 def encode_vid_data():
     cap=cv2.VideoCapture("Sample_cover_files/cover_video.mp4")
@@ -548,9 +549,7 @@ def encode_vid_data():
     print("\nEncoded the data successfully in the video file.")
     return frame_
 
-
 # In[22]:
-
 
 def decode_vid_data(frame_):
     cap = cv2.VideoCapture('stego_video.mp4')
@@ -574,9 +573,7 @@ def decode_vid_data(frame_):
             extract(frame_)
             return
 
-
 # In[23]:
-
 
 def vid_steg():
     while True:
@@ -595,9 +592,7 @@ def vid_steg():
             print("Incorrect Choice")
         print("\n")
 
-
 # In[24]:
-
 
 def main():
     print("\t\t      STEGANOGRAPHY")   
@@ -623,16 +618,12 @@ def main():
             print("Incorrect Choice")
         print("\n\n")
 
-
 # In[27]:
-
 
 if __name__ == "__main__":
     main()
 
-
 # In[ ]:
-
 
 
 

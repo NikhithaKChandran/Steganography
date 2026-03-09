@@ -1,0 +1,11 @@
+Steganography can be implemented using different types of digital media. The most common types include image steganography, audio steganography, video steganography, and text steganography. Each method hides information in a different type of file while maintaining the appearance of a normal file.
+
+Image steganography is one of the most widely used techniques. In this method, secret data is hidden within digital images. Images are composed of pixels, and each pixel contains color information. By modifying the least significant bit (LSB) of the pixel values, hidden information can be inserted without noticeably altering the image. Because these small changes are invisible to the human eye, the image still appears normal even though it contains hidden data.
+
+Audio steganography hides information within sound files such as WAV or MP3 files. The secret message is embedded into the audio signal by modifying certain bits of the audio samples. Since human hearing is not sensitive to very small changes in sound signals, the hidden message does not noticeably affect the audio quality.
+
+Video steganography combines both image and audio techniques since a video consists of a sequence of images and sound. Secret data can be hidden within individual frames of the video or within the audio track. Because videos contain a large amount of data, they provide a large capacity for hiding information.
+
+Text steganography is another method where hidden information is embedded within text files. This can be done by manipulating spaces between words, altering font styles, using invisible characters, or arranging words in specific patterns. However, text steganography is usually less secure because text files have limited redundancy compared to images or videos.
+
+Each type of steganography has its own advantages and limitations. The choice of method depends on factors such as file size, required secrecy, and the type of media being used.
